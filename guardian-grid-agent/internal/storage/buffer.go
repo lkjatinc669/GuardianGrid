@@ -1,29 +1,25 @@
 package storage
 
-package storage
-
 import "sync"
 
 type Buffer struct {
 	mu       sync.Mutex
-	data     []map[string]interface{}
+	data     map[string][]map[string]interface{}
 	capacity int
 }
 
-// PUBLIC
-
 func NewBuffer(capacity int) *Buffer {
 	if capacity <= 0 {
-		capacity = 100 // default safety
+		capacity = 100
 	}
 
 	return &Buffer{
-		data:     make([]map[string]interface{}, 0, capacity),
+		data:     make(map[string][]map[string]interface{}),
 		capacity: capacity,
 	}
 }
 
-func (b *Buffer) Add(d map[string]interface{}) {
+func (b *Buffer) AddGrouped(key string, d map[string]interface{}) {
 	if d == nil {
 		return
 	}
@@ -31,45 +27,30 @@ func (b *Buffer) Add(d map[string]interface{}) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	// prevent memory explosion
-	if len(b.data) >= b.capacity {
-		// drop oldest (simple ring behavior)
-		b.data = b.data[1:]
+	list := b.data[key]
+
+	if len(list) >= b.capacity {
+		list = list[1:]
 	}
 
-	b.data = append(b.data, d)
+	list = append(list, d)
+	b.data[key] = list
 }
 
-func (b *Buffer) Flush() []map[string]interface{} {
+func (b *Buffer) FlushGrouped() map[string][]map[string]interface{} {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if len(b.data) == 0 {
-		return nil
+	out := make(map[string][]map[string]interface{})
+
+	for k, v := range b.data {
+		if len(v) > 0 {
+			out[k] = v
+		}
 	}
 
-	out := make([]map[string]interface{}, len(b.data))
-	copy(out, b.data)
-
-	// reset buffer
-	b.data = b.data[:0]
+	// reset
+	b.data = make(map[string][]map[string]interface{})
 
 	return out
-}
-
-func (b *Buffer) Peek() []map[string]interface{} {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	out := make([]map[string]interface{}, len(b.data))
-	copy(out, b.data)
-
-	return out
-}
-
-func (b *Buffer) Size() int {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	return len(b.data)
 }

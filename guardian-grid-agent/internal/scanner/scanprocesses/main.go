@@ -1,44 +1,35 @@
-package scanner
+package scanprocesses
 
-// import (
-// 	"github.com/shirou/gopsutil/v3/process"
+import (
+	"time"
 
-// 	"guardian-grid-agent/utils"
-// )
+	"github.com/shirou/gopsutil/v3/process"
+)
 
-// // ---- structure ----
-// type ProcInfo struct {
-// 	PID  int32  `json:"pid"`
-// 	Name string `json:"name"`
-// 	Path string `json:"path"`
-// }
+// PUBLIC
+func ScanProcesses() (map[string]interface{}, error) {
+	procs, err := process.Processes()
+	if err != nil {
+		return emptyProcesses(), nil
+	}
 
-// // ---- main function ----
-// func SendProcesses(batchSize int) {
-// 	procs, _ := process.Processes()
+	result := make([]map[string]interface{}, 0)
+	maxProcesses := 300 // safety limit
 
-// 	var batch []ProcInfo
+	for i, p := range procs {
+		if i >= maxProcesses {
+			break
+		}
 
-// 	for _, p := range procs {
-// 		name, _ := p.Name()
-// 		exe, _ := p.Exe()
+		info := buildProcessInfo(p)
+		if info != nil {
+			result = append(result, info)
+		}
+	}
 
-// 		info := ProcInfo{
-// 			PID:  p.Pid,
-// 			Name: name,
-// 			Path: exe,
-// 		}
-
-// 		batch = append(batch, info)
-
-// 		if len(batch) >= batchSize {
-// 			utils.SendData("http://your-api/processes", batch)
-// 			batch = nil
-// 		}
-// 	}
-
-// 	// send remaining
-// 	if len(batch) > 0 {
-// 		utils.SendData("http://your-api/processes", batch)
-// 	}
-// }
+	return map[string]interface{}{
+		"processes": result,
+		"count":     len(result),
+		"timestamp": time.Now().Unix(),
+	}, nil
+}

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"sync"
 	"time"
 
 	"guardian-grid-agent/internal/scanner/activeusers"
@@ -17,91 +18,64 @@ import (
 	"guardian-grid-agent/internal/utils"
 )
 
-func RunAgent(apiURL string) {
+func RunAgent(baseURL string) {
 	buffer := storage.NewBuffer(200)
 
-	// 🔁 continuous scanning loop (non-blocking)
+	// 🔁 scan loop
 	go func() {
 		for {
-			data := runAllScanners()
-
-			if len(data) > 0 {
-				buffer.Add(data)
-			}
-
-			time.Sleep(3 * time.Second) // scan interval
+			runAllScanners(buffer)
+			time.Sleep(3 * time.Second)
 		}
 	}()
 
-	// ⏱ send every 15 seconds
+	// ⏱ send loop
 	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
 
 	for range ticker.C {
-		payload := buffer.Flush()
-		if len(payload) == 0 {
-			continue
-		}
+		payload := buffer.FlushGrouped()
 
-		go utils.SendData(apiURL, payload)
+		for endpoint, data := range payload {
+			if len(data) == 0 {
+				continue
+			}
+
+			url := baseURL + "/" + endpoint
+			go utils.SendData(url, data)
+		}
 	}
 }
 
-func runAllScanners() map[string]interface{} {
-	result := make(map[string]interface{})
+func runAllScanners(buffer *storage.Buffer) {
+	var wg sync.WaitGroup
 
-	type scanResult struct {
-		key  string
-		data map[string]interface{}
+	scanners := map[string]func() (map[string]interface{}, error){
+		"activeusers":  activeusers.ScanActiveUsers,
+		"dnscache":     dnscache.ScanDNSCache,
+		"liveactivity": liveactivity.ScanLiveActivity,
+		"network":      networkpackets.ScanNetworkPackets,
+		"openports":    openports.ScanOpenPorts,
+		"pcdata":       pcdata.ScanPCData,
+		"programs":     programscanner.ScanPrograms,
+		"processes":    scanprocesses.ScanProcesses,
+		"uptime":       systemuptime.ScanSystemUptime,
 	}
 
-	ch := make(chan scanResult)
+	for key, fn := range scanners {
+		wg.Add(1)
 
-	// 🔥 launch all scanners concurrently
-	go runScanner("active_users", activeusers.ScanActiveUsers, ch)
-	go runScanner("dns_cache", dnscache.ScanDNSCache, ch)
-	go runScanner("live_activity", liveactivity.ScanLiveActivity, ch)
-	go runScanner("network", networkpackets.ScanNetworkPackets, ch)
-	go runScanner("open_ports", openports.ScanOpenPorts, ch)
-	go runScanner("pc_data", pcdata.ScanPCData, ch)
-	go runScanner("programs", programscanner.ScanPrograms, ch)
-	go runScanner("processes", scanprocesses.ScanProcesses, ch)
-	go runScanner("uptime", systemuptime.ScanSystemUptime, ch)
+		go func(k string, f func() (map[string]interface{}, error)) {
+			defer wg.Done()
 
-	// ⚠️ optional (heavy)
-	// go runScanner("folder", func() (map[string]interface{}, error) {
-	//     return scanfolder.Scan("C:\\Users")
-	// }, ch)
+			data, err := f()
+			if err != nil || data == nil {
+				return
+			}
 
-	// collect results
-	for i := 0; i < 9; i++ {
-		res := <-ch
-		if res.data != nil {
-			result[res.key] = res.data
-		}
+			buffer.AddGrouped(k, data) // 🔥 key change
+		}(key, fn)
 	}
 
-	return result
-}
-
-func runScanner(
-	name string,
-	fn func() (map[string]interface{}, error),
-	ch chan<- struct {
-		key  string
-		data map[string]interface{}
-	},
-) {
-	data, err := fn()
-	if err != nil {
-		ch <- struct {
-			key  string
-			data map[string]interface{}
-		}{name, nil}
-		return
-	}
-
-	ch <- struct {
-		key  string
-		data map[string]interface{}
-	}{name, data}
+	wg.Wait()
 }
