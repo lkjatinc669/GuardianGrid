@@ -1,28 +1,22 @@
-// cmd/api/main.go
 package main
 
 import (
-	"guardian-grid-api/internal/db"
-	"guardian-grid-api/internal/models"
-	"guardian-grid-api/internal/routes"
-
-	"github.com/gin-gonic/gin"
+	"guardian-grid-api/internal/modules/auth"
+	"guardian-grid-api/internal/platform/database"
+	"guardian-grid-api/internal/router"
 )
 
 func main() {
-	// Init databases
-	db.InitSQLite()
-	// db.InitMySQL()
+	// Init SQLite
+	database.InitSQLite("static/guardian.db")
 
-	// Migrate tables
-	db.SQLite.AutoMigrate(&models.User{})
+	// First run check
+	if auth.IsFirstRun() {
+		auth.RunInitialSetup()
+	}
 
-	// Create server
-	r := gin.Default()
+	r := router.SetupRouter()
+	r.Run(":8080")
 
-	// Setup routes
-	routes.SetupRoutes(r)
-
-	// Run server
-	r.Run(":64289")
+	// start your router here
 }
