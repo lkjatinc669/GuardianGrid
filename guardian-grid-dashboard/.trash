@@ -1,0 +1,102 @@
+use tokio::net::TcpStream;
+use tokio::time::{timeout, Duration};
+use reqwest;
+use serde::Serialize;
+
+#[tauri::command]
+fn greet(name: &str) -> String {
+    format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[derive(Serialize)]
+struct ApiResponse {
+    success: bool,
+    message: String,
+}
+
+#[tauri::command]
+async fn scan_host(target: String, port: Option<u16>) -> Result<ApiResponse, String> {
+    let port = port.unwrap_or(80);
+    let addr = format!("{}:{}", target, port);
+
+    // 🔍 TCP check
+    let tcp_open = match timeout(Duration::from_secs(2), TcpStream::connect(&addr)).await {
+        Ok(Ok(_)) => true,
+        _ => false,
+    };
+
+    if !tcp_open {
+        return Ok(ApiResponse {
+            success: false,
+            message: format!("{}:{} unreachable", target, port),
+        });
+    }
+
+    // 🌐 HTTP request
+    let url1 = format!("http://{}:{}/gg", target, port);
+
+    let response = match timeout(Duration::from_secs(5), reqwest::get(&url)).await {
+        Ok(Ok(res)) => res,
+        _ => {
+            return Ok(ApiResponse {
+                success: false,
+                message: "HTTP request failed".into(),
+            });
+        }
+    };
+
+    let status = response.status().as_u16();
+
+    let body = match response.text().await {
+        Ok(text) => Some(text),
+        Err(_) => None,
+    };
+
+    Ok(ApiResponse {
+        success: status >= 200 && status < 300,
+        message: format!("Response received from {}", url),
+    })
+
+
+}
+
+async fn check_api_server(target: String, port: u16){
+
+    if port > 65365 {
+        return Ok(ApiResponse {
+            success: false,
+            message: "Port is out of range".to_owned(),
+        });
+    }
+
+    let addr = format!("{}:{}", target, port);
+
+    // 🔍 TCP check
+    let tcp_open = match timeout(Duration::from_secs(2), TcpStream::connect(&addr)).await {
+        Ok(Ok(_)) => true,
+        _ => false,
+    };
+
+    if !tcp_open {
+        return Ok(ApiResponse {
+            success: false,
+            message: format!("{}:{} unreachable", target, port),
+        });
+    }
+
+    // 🌐 HTTP request
+    print
+
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            scan_host
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
