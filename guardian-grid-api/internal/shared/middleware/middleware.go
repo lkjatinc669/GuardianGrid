@@ -12,11 +12,26 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*") // For production, specify your dashboard URL
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-Agent-Token")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
-		// Expect: Bearer <token>
 		if authHeader == "" {
 			response.ErrorWithCode(c, http.StatusUnauthorized, "Missing Authorization header")
 			c.Abort()
@@ -32,7 +47,6 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 
 		tokenStr := parts[1]
 
-		// Parse token
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 			return security.GetJWTSecret(), nil
 		})
@@ -43,7 +57,6 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Extract claims
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
 			response.ErrorWithCode(c, http.StatusUnauthorized, "Invalid token claims")
@@ -51,7 +64,6 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Attach user to context
 		user, _ := claims["user"].(string)
 		c.Set("user", user)
 
@@ -71,7 +83,6 @@ func AgentAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Expect: Bearer <token>
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			response.ErrorWithCode(c, http.StatusUnauthorized, "Invalid Authorization format")
@@ -88,7 +99,6 @@ func AgentAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Attach agent_id to request context
 		c.Set("agent_id", agentID)
 
 		c.Next()

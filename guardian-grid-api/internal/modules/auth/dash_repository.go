@@ -17,7 +17,7 @@ type DRepository struct {
 	db *sql.DB
 }
 
-func DashRepository() *DRepository {
+func NewDashRepository() *DRepository {
 	return &DRepository{
 		db: database.GetSQLite(),
 	}

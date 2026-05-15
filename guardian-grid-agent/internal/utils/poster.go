@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func SendData(url string, payload interface{}) (string, error) {
+func SendData(url string, payload interface{}, token string) (string, error) {
 	// Convert payload to JSON
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -28,6 +28,9 @@ func SendData(url string, payload interface{}) (string, error) {
 
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 
 	// Send request
 	resp, err := client.Do(req)

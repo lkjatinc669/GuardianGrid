@@ -10,7 +10,7 @@ type DService struct {
 	repo *DRepository
 }
 
-func DashService(repo *DRepository) *DService {
+func NewDashService(repo *DRepository) *DService {
 	return &DService{repo: repo}
 }
 

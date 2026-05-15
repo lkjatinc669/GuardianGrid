@@ -11,7 +11,7 @@ type AService struct {
 	repo *ARepository
 }
 
-func AgentService(repo *ARepository) *AService {
+func NewAgentService(repo *ARepository) *AService {
 	return &AService{repo: repo}
 }
 
@@ -31,4 +31,14 @@ func (s *AService) RegisterAgent(hostname string) (string, string, error) {
 	}
 
 	return id, token, nil
+}
+
+func (s *AService) ProcessTelemetry(agentID string, payload map[string]interface{}) error {
+	for teleType, data := range payload {
+		err := s.repo.SaveTelemetry(agentID, teleType, data)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 
+	"guardian-grid-api/internal/platform/security"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -13,16 +14,15 @@ var (
 	once     sync.Once
 )
 
-// InitSQLite initializes the SQLite database (singleton)
-func InitSQLite(dbPath string) *sql.DB {
+func InitSQLite() *sql.DB {
 	once.Do(func() {
+		dbPath := security.GetDBPath()
 		db, err := sql.Open("sqlite3", dbPath)
 		if err != nil {
 			log.Fatalf("failed to open sqlite DB: %v", err)
 		}
 
-		// Basic connection tuning
-		db.SetMaxOpenConns(1) // SQLite works best with single writer
+		db.SetMaxOpenConns(1)
 		db.SetMaxIdleConns(1)
 
 		if err := db.Ping(); err != nil {
@@ -30,38 +30,30 @@ func InitSQLite(dbPath string) *sql.DB {
 		}
 
 		sqliteDB = db
-
 		initTables(sqliteDB)
 	})
 
 	return sqliteDB
 }
 
-// GetSQLite returns existing DB instance
 func GetSQLite() *sql.DB {
 	if sqliteDB == nil {
-		log.Fatal("SQLite not initialized. Call InitSQLite first.")
+		return InitSQLite()
 	}
 	return sqliteDB
 }
 
-// CloseSQLite closes DB connection
 func CloseSQLite() {
 	if sqliteDB != nil {
 		sqliteDB.Close()
 	}
 }
 
-// ----------------------------
-// TABLE INITIALIZATION
-// ----------------------------
-
 func initTables(db *sql.DB) {
 	createUsersTable(db)
 	createAgentsTable(db)
 }
 
-// USERS TABLE (TOTP AUTH)
 func createUsersTable(db *sql.DB) {
 	query := `
 	CREATE TABLE IF NOT EXISTS users (
@@ -69,26 +61,20 @@ func createUsersTable(db *sql.DB) {
 		username TEXT UNIQUE NOT NULL,
 		totp_secret TEXT NOT NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
-	`
-
+	);`
 	if _, err := db.Exec(query); err != nil {
 		log.Fatalf("failed to create users table: %v", err)
 	}
 }
 
-// AGENTS TABLE (IDENTITY)
 func createAgentsTable(db *sql.DB) {
 	query := `
-	
 	CREATE TABLE IF NOT EXISTS agents (
 		id TEXT PRIMARY KEY,
 		hostname TEXT,
 		token TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
-	`
-
+	);`
 	if _, err := db.Exec(query); err != nil {
 		log.Fatalf("failed to create agents table: %v", err)
 	}

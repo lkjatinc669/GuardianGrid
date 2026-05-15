@@ -11,7 +11,7 @@ type DHandler struct {
 	service *DService
 }
 
-func DashHandler(service *DService) *DHandler {
+func NewDashHandler(service *DService) *DHandler {
 	return &DHandler{service: service}
 }
 

@@ -22,7 +22,7 @@ func ScanNetworkPackets() (map[string]interface{}, error) {
 	}
 
 	diff := calcNetDiff(start[0], end[0])
-	conns := getConnCount()
+	conns := getDetailedConnections()
 
 	return map[string]interface{}{
 		"network_activity": map[string]interface{}{
@@ -31,6 +31,7 @@ func ScanNetworkPackets() (map[string]interface{}, error) {
 			"packets_sent": diff.packetsSent,
 			"packets_recv": diff.packetsRecv,
 			"connections":  conns,
+			"count":        len(conns),
 			"interval_sec": 2,
 			"timestamp":    time.Now().Unix(),
 		},

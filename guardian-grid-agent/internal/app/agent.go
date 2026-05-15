@@ -1,15 +1,18 @@
 package app
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
+	"guardian-grid-agent/internal/auth"
 	"guardian-grid-agent/internal/scanner/activeusers"
 	"guardian-grid-agent/internal/scanner/dnscache"
 	"guardian-grid-agent/internal/scanner/liveactivity"
 	"guardian-grid-agent/internal/scanner/networkpackets"
 	"guardian-grid-agent/internal/scanner/openports"
 	"guardian-grid-agent/internal/scanner/pcdata"
+	"guardian-grid-agent/internal/scanner/persistence"
 	"guardian-grid-agent/internal/scanner/programscanner"
 	"guardian-grid-agent/internal/scanner/scanprocesses"
 	"guardian-grid-agent/internal/scanner/systemuptime"
@@ -19,6 +22,20 @@ import (
 )
 
 func RunAgent(baseURL string) {
+	// 1. Auth / Registration
+	config, err := auth.GetConfig()
+	if err != nil {
+		fmt.Println("🔑 Registering agent with API...")
+		config, err = auth.Register(baseURL)
+		if err != nil {
+			fmt.Printf("❌ Registration failed: %v. Retrying in 10s...\n", err)
+			time.Sleep(10 * time.Second)
+			RunAgent(baseURL)
+			return
+		}
+		fmt.Printf("✅ Registered! ID: %s\n", config.AgentID)
+	}
+
 	buffer := storage.NewBuffer(200)
 
 	// 🔁 scan loop
@@ -36,14 +53,12 @@ func RunAgent(baseURL string) {
 	for range ticker.C {
 		payload := buffer.FlushGrouped()
 
-		for endpoint, data := range payload {
-			if len(data) == 0 {
-				continue
-			}
-
-			url := baseURL + "/" + endpoint
-			go utils.SendData(url, data)
+		if len(payload) == 0 {
+			continue
 		}
+
+		url := baseURL + "/agent/data"
+		go utils.SendData(url, payload, config.Token)
 	}
 }
 
@@ -57,6 +72,7 @@ func runAllScanners(buffer *storage.Buffer) {
 		"network":      networkpackets.ScanNetworkPackets,
 		"openports":    openports.ScanOpenPorts,
 		"pcdata":       pcdata.ScanPCData,
+		"persistence":  persistence.ScanPersistence,
 		"programs":     programscanner.ScanPrograms,
 		"processes":    scanprocesses.ScanProcesses,
 		"uptime":       systemuptime.ScanSystemUptime,
@@ -73,7 +89,7 @@ func runAllScanners(buffer *storage.Buffer) {
 				return
 			}
 
-			buffer.AddGrouped(k, data) // 🔥 key change
+			buffer.AddGrouped(k, data)
 		}(key, fn)
 	}
 
