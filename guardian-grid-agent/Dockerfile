@@ -1,37 +1,50 @@
-# Build stage
-FROM golang:1.25-alpine AS builder
+# --- Build Stage ---
+FROM golang:1.21-alpine AS builder
 
-# Set the working directory
+# Install build dependencies
+RUN apk add --no-cache git gcc musl-dev
+
 WORKDIR /app
 
-# Copy go mod and sum files
+# Cache dependencies
 COPY go.mod go.sum ./
-
-# Download dependencies
 RUN go mod download
 
-# Copy the source code
+# Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o guardian-grid-agent ./cmd/agent/main.go
+# Build production binary
+# -s -w: Strips debug info and symbol tables (reduces size by ~30%)
+# CGO_ENABLED=0: Ensures a fully static binary
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-s -w" \
+    -o /guardian-grid-agent \
+    ./cmd/agent/main.go
 
-# Final stage
-FROM alpine:latest
+# --- Final Stage ---
+FROM alpine:3.19
 
-# Install basic tools for scanning if needed
-RUN apk add --no-cache ca-certificates procps iproute2
+# Install runtime utilities for Linux scanning
+# procps: for process info (/proc)
+# iproute2: for detailed network stats
+RUN apk add --no-cache \
+    ca-certificates \
+    procps \
+    iproute2 \
+    tzdata
 
 WORKDIR /app
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/guardian-grid-agent .
+# Copy the binary from builder
+COPY --from=builder /guardian-grid-agent .
 
-# Ensure the agent has execution permissions
+# Metadata and permissions
 RUN chmod +x guardian-grid-agent
 
-# Set the default API URL (can be overridden at runtime)
+# Environment defaults
 ENV API_URL=http://127.0.0.1:8080
+ENV GIN_MODE=release
 
-# Run the agent
-CMD ["./guardian-grid-agent"]
+# Note: The agent typically requires --privileged or root access 
+# to scan the host's /proc and /sys directories.
+ENTRYPOINT ["./guardian-grid-agent"]

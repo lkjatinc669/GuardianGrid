@@ -1,3 +1,5 @@
+//go:build linux
+
 package dnscache
 
 func scanLinuxDNS() (map[string]interface{}, error) {

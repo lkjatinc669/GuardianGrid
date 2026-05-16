@@ -1,3 +1,5 @@
+//go:build linux
+
 package programscanner
 
 func scanLinuxPrograms() (map[string]interface{}, error) {

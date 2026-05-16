@@ -1,3 +1,5 @@
+//go:build darwin
+
 package dnscache
 
 func scanMacDNS() (map[string]interface{}, error) {

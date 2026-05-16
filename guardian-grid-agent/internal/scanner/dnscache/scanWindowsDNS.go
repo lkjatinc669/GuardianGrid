@@ -1,3 +1,5 @@
+//go:build windows
+
 package dnscache
 
 func scanWindowsDNS() (map[string]interface{}, error) {
