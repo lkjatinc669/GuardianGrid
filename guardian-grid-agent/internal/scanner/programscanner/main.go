@@ -15,8 +15,8 @@ func ScanPrograms() (map[string]interface{}, error) {
 		return scanMacPrograms()
 	default:
 		return map[string]interface{}{
-			"installed_programs": []interface{}{},
-			"count":              0,
+			"programs": []interface{}{},
+			"count":    0,
 		}, nil
 	}
 }

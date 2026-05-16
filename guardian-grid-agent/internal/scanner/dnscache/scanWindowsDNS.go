@@ -9,7 +9,7 @@ func scanWindowsDNS() (map[string]interface{}, error) {
 	domains := parseWindowsDNS(string(out))
 
 	return map[string]interface{}{
-		"dns_cache": domains,
-		"count":     len(domains),
+		"dns_entries": domains,
+		"count":       len(domains),
 	}, nil
 }

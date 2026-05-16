@@ -54,8 +54,21 @@ const Dashboard = () => {
 
             ws.current.onmessage = (event) => {
                 const message = JSON.parse(event.data);
+                
+                if (message.type === "agent_registered") {
+                    setAgents(prev => {
+                        if (prev.find(a => a.agent_id === message.agent_id)) return prev;
+                        return [...prev, { agent_id: message.agent_id, data: {} }];
+                    });
+                }
+
                 if (message.type === "telemetry_update") {
                     setAgents(prevAgents => {
+                        const exists = prevAgents.find(a => a.agent_id === message.agent_id);
+                        if (!exists) {
+                            return [...prevAgents, { agent_id: message.agent_id, data: message.data }];
+                        }
+
                         return prevAgents.map(agent => {
                             if (agent.agent_id === message.agent_id) {
                                 return {
@@ -71,10 +84,21 @@ const Dashboard = () => {
                     });
 
                     const safeId = message.agent_id.replace(/[^a-zA-Z0-9]/g, '');
-                    gsap.fromTo(`.agent-card-${safeId}`, 
-                        { borderColor: "#00ff9d" }, 
-                        { borderColor: "rgba(255,255,255,0.1)", duration: 2 }
-                    );
+                    const card = document.querySelector(`.agent-card-${safeId}`);
+                    if (card) {
+                        // Pulse the whole card
+                        gsap.fromTo(card, 
+                            { borderColor: "#00ff9d", boxShadow: "0 0 20px rgba(0,255,157,0.2)" }, 
+                            { borderColor: "rgba(255,255,255,0.1)", boxShadow: "0 0 0px rgba(0,0,0,0)", duration: 1 }
+                        );
+
+                        // Pulse metrics specifically
+                        const metrics = card.querySelectorAll('.metric-value');
+                        gsap.fromTo(metrics,
+                            { color: "#00ff9d", scale: 1.05 },
+                            { color: "", scale: 1, duration: 0.5, stagger: 0.05 }
+                        );
+                    }
                 }
             };
 
@@ -143,11 +167,11 @@ const Dashboard = () => {
                                         <h3 className="text-[9px] text-slate-500 uppercase tracking-widest mb-3 border-b border-white/5 pb-2">Network_Forensics</h3>
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="text-xs text-slate-400">Active_Conns</span>
-                                            <span className="text-blue-400 text-sm font-bold">{agent.data?.network?.network_activity?.count || 0}</span>
+                                            <span className="metric-value text-blue-400 text-sm font-bold">{agent.data?.network?.network_activity?.count || 0}</span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-xs text-slate-400">Throughput</span>
-                                            <span className="text-blue-400 text-xs">{((agent.data?.network?.network_activity?.bytes_sent || 0) / 1024).toFixed(2)} KB/s</span>
+                                            <span className="metric-value text-blue-400 text-xs">{((agent.data?.network?.network_activity?.bytes_sent || 0) / 1024).toFixed(2)} KB/s</span>
                                         </div>
                                     </div>
 
@@ -155,7 +179,7 @@ const Dashboard = () => {
                                         <h3 className="text-[9px] text-slate-500 uppercase tracking-widest mb-3 border-b border-white/5 pb-2">Persistence_Audit</h3>
                                         <div className="flex justify-between items-center">
                                             <span className="text-xs text-slate-400">Autorun_Entries</span>
-                                            <span className={`${(agent.data?.persistence?.count || 0) > 10 ? 'text-red-400' : 'text-orange-400'} text-sm font-bold`}>
+                                            <span className={`metric-value ${(agent.data?.persistence?.count || 0) > 10 ? 'text-red-400' : 'text-orange-400'} text-sm font-bold`}>
                                                 {agent.data?.persistence?.count || 0}
                                             </span>
                                         </div>
@@ -165,7 +189,7 @@ const Dashboard = () => {
                                         <h3 className="text-[9px] text-slate-500 uppercase tracking-widest mb-3 border-b border-white/5 pb-2">System_Integrity</h3>
                                         <div className="flex justify-between items-center">
                                             <span className="text-xs text-slate-400">Running_Procs</span>
-                                            <span className="text-[#00ff9d] text-sm font-bold">{agent.data?.processes?.count || 0}</span>
+                                            <span className="metric-value text-[#00ff9d] text-sm font-bold">{agent.data?.processes?.count || 0}</span>
                                         </div>
                                     </div>
                                 </div>

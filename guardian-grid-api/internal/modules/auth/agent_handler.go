@@ -33,6 +33,11 @@ func (h *AHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// 📡 Notify dashboard of new agent
+	if h.hub != nil {
+		h.hub.BroadcastNewAgent(id, req.Hostname)
+	}
+
 	response.Success(c, gin.H{
 		"agent_id": id,
 		"token":    token,
@@ -48,15 +53,15 @@ func (h *AHandler) PostData(c *gin.Context) {
 		return
 	}
 
-	err := h.service.ProcessTelemetry(fmt.Sprintf("%v", agentID), payload)
+	latestData, err := h.service.ProcessTelemetry(fmt.Sprintf("%v", agentID), payload)
 	if err != nil {
 		response.Error(c, "Failed to save telemetry")
 		return
 	}
 
-	// 📡 Stream to dashboard
+	// 📡 Stream latest data to dashboard
 	if h.hub != nil {
-		h.hub.BroadcastTelemetry(fmt.Sprintf("%v", agentID), payload)
+		h.hub.BroadcastTelemetry(fmt.Sprintf("%v", agentID), latestData)
 	}
 
 	fmt.Printf("📥 Telemetry saved for agent: %v\n", agentID)

@@ -20,6 +20,8 @@ const AgentDetails = () => {
     const [activeTab, setActiveTab] = useState('network');
     const containerRef = useRef(null);
 
+    const ws = useRef(null);
+
     const fetchAgentDetails = async () => {
         try {
             const token = localStorage.getItem("token");
@@ -39,8 +41,35 @@ const AgentDetails = () => {
 
     useEffect(() => {
         fetchAgentDetails();
-        const interval = setInterval(fetchAgentDetails, 10000);
-        return () => clearInterval(interval);
+
+        const connectWS = () => {
+            ws.current = new WebSocket("ws://localhost:8080/ws");
+
+            ws.current.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                if (message.type === "telemetry_update" && message.agent_id === id) {
+                    setAgent(prevAgent => ({
+                        ...prevAgent,
+                        data: {
+                            ...prevAgent?.data,
+                            ...message.data
+                        }
+                    }));
+                }
+            };
+
+            ws.current.onclose = () => {
+                setTimeout(connectWS, 3000);
+            };
+        };
+
+        connectWS();
+        const interval = setInterval(fetchAgentDetails, 3000);
+        
+        return () => {
+            ws.current?.close();
+            clearInterval(interval);
+        };
     }, [id]);
 
     useEffect(() => {

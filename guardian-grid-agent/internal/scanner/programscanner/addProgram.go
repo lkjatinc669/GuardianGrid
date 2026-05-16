@@ -8,6 +8,7 @@ func addProgram(item interface{}, result *[]map[string]interface{}, seen map[str
 
 	name, _ := obj["DisplayName"].(string)
 	version, _ := obj["DisplayVersion"].(string)
+	publisher, _ := obj["Publisher"].(string)
 
 	if name == "" || containsNoise(name) {
 		return
@@ -19,9 +20,10 @@ func addProgram(item interface{}, result *[]map[string]interface{}, seen map[str
 	}
 	seen[key] = true
 
-	entry := map[string]interface{}{"name": name}
-	if version != "" {
-		entry["version"] = version
+	entry := map[string]interface{}{
+		"name":      name,
+		"version":   version,
+		"publisher": publisher,
 	}
 
 	*result = append(*result, entry)

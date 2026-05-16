@@ -42,12 +42,12 @@ func RunAgent(baseURL string) {
 	go func() {
 		for {
 			runAllScanners(buffer)
-			time.Sleep(3 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
 	// ⏱ send loop
-	ticker := time.NewTicker(15 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {

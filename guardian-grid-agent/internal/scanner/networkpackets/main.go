@@ -13,8 +13,8 @@ func ScanNetworkPackets() (map[string]interface{}, error) {
 		return emptyNetwork(), nil
 	}
 
-	// short window (don’t make this long)
-	time.Sleep(2 * time.Second)
+	// ultra-short window for high-frequency updates
+	time.Sleep(500 * time.Millisecond)
 
 	end, err := net.IOCounters(false)
 	if err != nil || len(end) == 0 {

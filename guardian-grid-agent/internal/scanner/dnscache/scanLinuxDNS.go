@@ -10,7 +10,14 @@ func scanLinuxDNS() (map[string]interface{}, error) {
 	// Linux DNS cache is not directly accessible
 	// so return minimal signal
 	return map[string]interface{}{
-		"dns_cache_raw": string(out),
-		"count":         0,
+		"dns_entries": []map[string]interface{}{
+			{
+				"hostname": "Raw Output",
+				"ip":       "N/A",
+				"type":     "RAW",
+				"details":  string(out),
+			},
+		},
+		"count": 1,
 	}, nil
 }

@@ -75,6 +75,16 @@ func (h *Hub) BroadcastTelemetry(agentID string, data map[string]interface{}) {
 	h.broadcast <- message
 }
 
+func (h *Hub) BroadcastNewAgent(agentID string, hostname string) {
+	payload := map[string]interface{}{
+		"type":     "agent_registered",
+		"agent_id": agentID,
+		"hostname": hostname,
+	}
+	message, _ := json.Marshal(payload)
+	h.broadcast <- message
+}
+
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

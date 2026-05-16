@@ -10,14 +10,19 @@ func buildProcessInfo(p *process.Process) map[string]interface{} {
 
 	pid := p.Pid
 	cpu, _ := p.CPUPercent()
-	mem, _ := p.MemoryPercent()
+	memInfo, _ := p.MemoryInfo()
 	username, _ := p.Username()
 
+	rss := uint64(0)
+	if memInfo != nil {
+		rss = memInfo.RSS
+	}
+
 	return map[string]interface{}{
-		"pid":    pid,
-		"name":   name,
-		"cpu":    cpu,
-		"memory": mem,
-		"user":   username,
+		"pid":         pid,
+		"name":        name,
+		"cpu_percent": cpu,
+		"memory_rss":  rss,
+		"user":        username,
 	}
 }

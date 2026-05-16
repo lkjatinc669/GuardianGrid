@@ -2,10 +2,10 @@ package dnscache
 
 import "strings"
 
-func parseWindowsDNS(raw string) []string {
+func parseWindowsDNS(raw string) []map[string]interface{} {
 	lines := strings.Split(raw, "\n")
 	seen := make(map[string]bool)
-	result := []string{}
+	result := []map[string]interface{}{}
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -17,7 +17,11 @@ func parseWindowsDNS(raw string) []string {
 
 				if domain != "" && !seen[domain] {
 					seen[domain] = true
-					result = append(result, domain)
+					result = append(result, map[string]interface{}{
+						"hostname": domain,
+						"ip":       "---", // ipconfig /displaydns doesn't easily provide IP in same line
+						"type":     "A",
+					})
 				}
 			}
 		}

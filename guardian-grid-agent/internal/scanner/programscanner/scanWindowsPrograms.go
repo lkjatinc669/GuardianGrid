@@ -16,7 +16,7 @@ $paths = @(
 $programs = foreach ($p in $paths) {
   Get-ItemProperty $p -ErrorAction SilentlyContinue |
   Where-Object { $_.DisplayName } |
-  Select-Object DisplayName, DisplayVersion
+  Select-Object DisplayName, DisplayVersion, Publisher
 }
 
 $programs | ConvertTo-Json -Compress
