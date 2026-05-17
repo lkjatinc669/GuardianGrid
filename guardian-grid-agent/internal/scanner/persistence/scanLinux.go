@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func scanLinuxPersistence() ([]PersistenceItem, error) {
+func scanPersistence() ([]PersistenceItem, error) {
 	items := make([]PersistenceItem, 0)
 
 	// 1. Check systemd services (simplified: just list files in common dirs)

@@ -9,7 +9,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-func scanWindowsPersistence() ([]PersistenceItem, error) {
+func scanPersistence() ([]PersistenceItem, error) {
 	items := make([]PersistenceItem, 0)
 
 	// 1. Registry keys for "Run"

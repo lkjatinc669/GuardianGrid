@@ -7,7 +7,7 @@ import (
 	"os/exec"
 )
 
-func showWindows(title, message string, nType NotificationType) {
+func showNotification(title, message string, nType NotificationType) {
 	prefix := ""
 
 	switch nType {
@@ -19,10 +19,14 @@ func showWindows(title, message string, nType NotificationType) {
 		prefix = "ℹ️ "
 	}
 
-	cmd := exec.Command("powershell",
+	cmd := exec.Command(
+		"powershell",
 		"-Command",
-		fmt.Sprintf(`New-BurntToastNotification -Text "%s", "%s"`,
-			title, prefix+message),
+		fmt.Sprintf(
+			`New-BurntToastNotification -Text "%s", "%s"`,
+			title,
+			prefix+message,
+		),
 	)
 
 	cmd.Run()

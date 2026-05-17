@@ -4,7 +4,7 @@ package programscanner
 
 import "strings"
 
-func scanMacPrograms() (map[string]interface{}, error) {
+func scanPrograms() (map[string]interface{}, error) {
 	programs := []map[string]interface{}{}
 
 	// 1. Applications folder (no reliable version)

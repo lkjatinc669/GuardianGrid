@@ -2,7 +2,7 @@
 
 package programscanner
 
-func scanLinuxPrograms() (map[string]interface{}, error) {
+func scanPrograms() (map[string]interface{}, error) {
 	// Try dpkg (Debian/Ubuntu)
 	if data, err := runCmd("dpkg-query", "-W", "-f=${Package}\t${Version}\n"); err == nil {
 		return parseKeyValueLines(data)

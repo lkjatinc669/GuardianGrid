@@ -7,7 +7,7 @@ import (
 	"os/exec"
 )
 
-func scanWindowsPrograms() (map[string]interface{}, error) {
+func scanPrograms() (map[string]interface{}, error) {
 	ps := `
 $paths = @(
   "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",

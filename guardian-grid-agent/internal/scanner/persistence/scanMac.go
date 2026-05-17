@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func scanMacPersistence() ([]PersistenceItem, error) {
+func scanPersistence() ([]PersistenceItem, error) {
 	items := make([]PersistenceItem, 0)
 
 	// LaunchAgents and LaunchDaemons

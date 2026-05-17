@@ -2,7 +2,7 @@
 
 package dnscache
 
-func scanWindowsDNS() (map[string]interface{}, error) {
+func scanDNS() (map[string]interface{}, error) {
 	out, err := runCmd("ipconfig", "/displaydns")
 	if err != nil {
 		return emptyDNS(), nil

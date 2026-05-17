@@ -1,10 +1,5 @@
 package notification
 
-import (
-	"fmt"
-	"runtime"
-)
-
 type NotificationType string
 
 const (
@@ -14,18 +9,5 @@ const (
 )
 
 func ShowNotification(title, message string, nType NotificationType) {
-	switch runtime.GOOS {
-
-	case "windows":
-		showWindows(title, message, nType)
-
-	case "linux":
-		showLinux(title, message, nType)
-
-	case "darwin":
-		showMac(title, message)
-
-	default:
-		fmt.Println("Unsupported OS")
-	}
+	showNotification(title, message, nType)
 }

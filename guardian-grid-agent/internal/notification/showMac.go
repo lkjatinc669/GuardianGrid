@@ -7,10 +7,15 @@ import (
 	"os/exec"
 )
 
-func showMac(title, message string) {
-	cmd := exec.Command("osascript",
+func showNotification(title, message string, nType NotificationType) {
+	cmd := exec.Command(
+		"osascript",
 		"-e",
-		fmt.Sprintf(`display notification "%s" with title "%s"`, message, title),
+		fmt.Sprintf(
+			`display notification "%s" with title "%s"`,
+			message,
+			title,
+		),
 	)
 
 	cmd.Run()

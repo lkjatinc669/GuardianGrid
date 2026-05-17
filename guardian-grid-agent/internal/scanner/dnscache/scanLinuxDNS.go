@@ -2,7 +2,7 @@
 
 package dnscache
 
-func scanLinuxDNS() (map[string]interface{}, error) {
+func scanDNS() (map[string]interface{}, error) {
 	// systemd-resolved (most modern distros)
 	out, err := runCmd("resolvectl", "query", "google.com")
 	if err != nil {
