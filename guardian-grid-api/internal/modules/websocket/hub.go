@@ -85,6 +85,16 @@ func (h *Hub) BroadcastNewAgent(agentID string, hostname string) {
 	h.broadcast <- message
 }
 
+func (h *Hub) BroadcastAlert(agentID string, alert interface{}) {
+	payload := map[string]interface{}{
+		"type":     "security_alert",
+		"agent_id": agentID,
+		"data":     alert,
+	}
+	message, _ := json.Marshal(payload)
+	h.broadcast <- message
+}
+
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

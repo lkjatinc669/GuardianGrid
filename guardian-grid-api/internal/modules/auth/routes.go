@@ -1,12 +1,14 @@
 package auth
 
 import (
+	"guardian-grid-api/internal/modules/alerts"
+	"guardian-grid-api/internal/modules/cve"
 	"guardian-grid-api/internal/modules/websocket"
 
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, hub *websocket.Hub) {
+func RegisterRoutes(r *gin.Engine, hub *websocket.Hub, alertService *alerts.Service, cveService *cve.CVEService) {
 	// user auth
 	userRepo := NewDashRepository()
 	userService := NewDashService(userRepo)
@@ -14,7 +16,7 @@ func RegisterRoutes(r *gin.Engine, hub *websocket.Hub) {
 
 	// agent auth
 	agentRepo := NewAgentRepository()
-	agentService := NewAgentService(agentRepo)
+	agentService := NewAgentService(agentRepo, alertService, cveService, hub)
 	agentHandler := NewAgentHandler(agentService, hub)
 
 	group := r.Group("/auth")

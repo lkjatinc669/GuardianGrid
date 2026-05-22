@@ -1,7 +1,9 @@
 package router
 
 import (
+	"guardian-grid-api/internal/modules/alerts"
 	"guardian-grid-api/internal/modules/auth"
+	"guardian-grid-api/internal/modules/cve"
 	"guardian-grid-api/internal/modules/dashboard"
 	"guardian-grid-api/internal/modules/websocket"
 	"guardian-grid-api/internal/shared/middleware"
@@ -19,8 +21,15 @@ func SetupRouter() *gin.Engine {
 	hub := websocket.NewHub()
 	go hub.Run()
 
+	// Services
+	alertRepo := alerts.NewRepository()
+	alertService := alerts.NewService(alertRepo)
+	alertHandler := alerts.NewHandler(alertService, hub)
+
+	cveService := cve.NewCVEService()
+
 	// Auth routes (public)
-	auth.RegisterRoutes(r, hub)
+	auth.RegisterRoutes(r, hub, alertService, cveService)
 
 	// Stream (Dashboard WebSocket)
 	r.GET("/ws", func(c *gin.Context) {
@@ -36,11 +45,12 @@ func SetupRouter() *gin.Engine {
 	dashboardGroup.Use(middleware.JWTAuthMiddleware())
 	{
 		dashboard.RegisterRoutes(dashboardGroup, dashHandler)
+		alerts.RegisterDashboardRoutes(dashboardGroup, alertHandler)
 	}
 
 	// Agent routes
 	agentRepo := auth.NewAgentRepository()
-	agentService := auth.NewAgentService(agentRepo)
+	agentService := auth.NewAgentService(agentRepo, alertService, cveService, hub)
 	agentHandler := auth.NewAgentHandler(agentService, hub)
 
 	agentGroup := r.Group("/agent")
@@ -53,6 +63,7 @@ func SetupRouter() *gin.Engine {
 		protected.Use(middleware.AgentAuthMiddleware())
 		{
 			protected.POST("/data", agentHandler.PostData)
+			alerts.RegisterAgentRoutes(protected, alertHandler)
 		}
 	}
 

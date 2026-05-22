@@ -3,16 +3,28 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
+	"guardian-grid-api/internal/modules/alerts"
+	"guardian-grid-api/internal/modules/cve"
+	"guardian-grid-api/internal/modules/websocket"
 
 	"github.com/google/uuid"
 )
 
 type AService struct {
-	repo *ARepository
+	repo         *ARepository
+	alertService *alerts.Service
+	cveService   *cve.CVEService
+	hub          *websocket.Hub
 }
 
-func NewAgentService(repo *ARepository) *AService {
-	return &AService{repo: repo}
+func NewAgentService(repo *ARepository, alertService *alerts.Service, cveService *cve.CVEService, hub *websocket.Hub) *AService {
+	return &AService{
+		repo:         repo,
+		alertService: alertService,
+		cveService:   cveService,
+		hub:          hub,
+	}
 }
 
 func generateAgentToken() string {
@@ -45,6 +57,11 @@ func (s *AService) ProcessTelemetry(agentID string, payload map[string]interface
 				if err != nil {
 					return nil, err
 				}
+
+				// If telemetry is 'programs', perform CVE scan
+				if teleType == "programs" {
+					s.performCVEScan(agentID, item)
+				}
 			}
 			// Keep the last (latest) one for broadcasting to the dashboard
 			latestData[teleType] = dataList[len(dataList)-1]
@@ -55,7 +72,58 @@ func (s *AService) ProcessTelemetry(agentID string, payload map[string]interface
 				return nil, err
 			}
 			latestData[teleType] = data
+
+			if teleType == "programs" {
+				s.performCVEScan(agentID, data)
+			}
 		}
 	}
 	return latestData, nil
+}
+
+func (s *AService) performCVEScan(agentID string, data interface{}) {
+	progData, ok := data.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	programs, ok := progData["programs"].([]interface{})
+	if !ok {
+		return
+	}
+
+	for _, p := range programs {
+		prog, ok := p.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		name, _ := prog["name"].(string)
+		version, _ := prog["version"].(string)
+
+		if name == "" || version == "" {
+			continue
+		}
+
+		findings := s.cveService.Scan(name, version)
+		for _, v := range findings {
+			alert := alerts.Alert{
+				AgentID:     agentID,
+				ProgramName: name,
+				Version:     version,
+				CVEID:       v.CVEID,
+				Severity:    v.Severity,
+				Description: v.Description,
+				Score:       v.Score,
+			}
+
+			err := s.alertService.CreateAlert(alert)
+			if err == nil {
+				fmt.Printf("⚠️ SECURITY ALERT: %s found in %s v%s\n", v.CVEID, name, version)
+				if s.hub != nil {
+					s.hub.BroadcastAlert(agentID, alert)
+				}
+			}
+		}
+	}
 }
